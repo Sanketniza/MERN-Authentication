@@ -10,6 +10,7 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 import connectDB from "./util/mongodb.js";
 import { errorMiddleware } from "./middlewares/error.js";
+import userRouter from "./routes/user.route.js";
 
 // &----------------------------------------------------------------
 
@@ -29,6 +30,9 @@ app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true })); // for form data , means data from frontend to backend in which the data is in the form of key-value pair (like name: value)
 
+// &----------------------------------------------------------------
+
+app.use("/api/v1/user", userRouter);
 
 // &----------------------------------------------------------------
 

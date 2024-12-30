@@ -1,6 +1,6 @@
 
 import mongoose from "mongoose";
-import bcrypt from "bcryptjs";
+import bcrypt from "bcrypt";
 
 const userSchema = new mongoose.Schema({
     name:String,
@@ -49,11 +49,11 @@ userSchema.pre("save",async function(next){
     this.password = await bcrypt.hash(this.password,10);
 });
 
-userSchema.method.comparePassword = async function(enteredPassword){
+userSchema.methods.comparePassword = async function(enteredPassword){
     return await bcrypt.compare(enteredPassword,this.password);
 }
 
-userSchema.method.generateVerificationCode = function() {
+userSchema.methods.generateVerificationCode = function() {
 
     function generateRandomFiveDigitNumber () {
         const firstDigit = Math.floor(Math.random() * 9) + 1;

@@ -1,8 +1,8 @@
 
-import ErrorHandler from "../middlewares/error";
-import User from "../models/user.model";
-import { catchAsyncError } from "../middlewares/catchAsyncError";
-import { sendEmail } from "../util/sendEmail";
+import ErrorHandler from '../middlewares/error.js'; // Correct path
+import User from "../models/user.model.js";
+import { catchAsyncError } from "../middlewares/catchAsyncError.js";
+import { sendEmail } from "../util/sendEmail.js";
 import twilio from "twilio";
 
 const client = twilio(process.env.TWILIO_SID , process.env.TWILIO_AUTH_TOKEN);
@@ -18,7 +18,7 @@ export const registerUser = catchAsyncError(async (req, res, next) => {
         }
 
         function validatePhoneNumber(phone) {
-            const phoneRegex = /^91[6-9]\d{9}$/;
+            const phoneRegex = /^\+91[6-9]\d{9}$/;
             return phoneRegex.test(phone);
         }
 
@@ -44,7 +44,7 @@ export const registerUser = catchAsyncError(async (req, res, next) => {
             return next(new ErrorHandler("User already exists with this email or phone",400));
         }
 
-        const registrationAttemptsByUser = await User.findOne({
+        const registrationAttemptsByUser = await User.find({
 
             $or : [
                 {
@@ -59,34 +59,29 @@ export const registerUser = catchAsyncError(async (req, res, next) => {
             ],
         });
 
-        if(registrationAttemptsByUser.length > 3){
-                return next(new ErrorHandler("You have exceeded the maximum number of registration attempts please try again later",400));
+        if ( registrationAttemptsByUser.length > 3) {
+            return next(new ErrorHandler("You have exceeded the maximum number of registration attempts. Please try again later", 400));
         }
 
-        const user = await User.create({
+        const userData = {
             name,
             email,
+            phone,
             password,
-            phone
-        });
+          };
+      
+          const user = await User.create(userData);
+          const verificationCode = await user.generateVerificationCode();
+          await user.save();
 
-        const verificationCode = await user.generateVerificationCode();
-
-        await user.save();
-
-        sendVerificationCode(verificationMethod , verificationCode , email , phone);
-
-        res.status(201).json({
-            success : true,
-            message : "Account registered successfully, Please verify your account"
-        });
+        sendVerificationCode(verificationMethod , verificationCode , name , email , phone , res);
 
     } catch(err){
         next(err);
     }
 });
 
-async function sendVerificationCode(verificationMethod , verificationCode , email , phone , name) {
+async function sendVerificationCode(verificationMethod , verificationCode , name , email , phone  ,res) {
 
     try{
 
@@ -99,6 +94,11 @@ async function sendVerificationCode(verificationMethod , verificationCode , emai
                 subject : "Account Verification Code",
                 message
             })
+
+            res.status(201).json({
+                success : true,
+                message : `Verification code sent to email ${name}`,
+            });
 
         } 
 
@@ -122,17 +122,31 @@ async function sendVerificationCode(verificationMethod , verificationCode , emai
                 // message : `Your verification code is ${verificationCodeWithSpace}`,
             });
 
-            const message = `Your verification code is ${verificationCodeWithSpace}`;
+            // const message = `Your verification code is ${verificationCodeWithSpace}`;
+
+            res.status(201).json({
+                success : true,
+                message : `OTP send ${name}`,
+            });
+
 
         }
 
         else {
-            throw new ErrorHandler("Invalid verification method",500);
+            return res.status(500).json({
+                success : false,
+                message : "Invalid verification method",
+            });
+            // throw new ErrorHandler("Invalid verification method",500);
         }
 
     } catch(err){
         console.log(err);
-        throw new ErrorHandler("Error sending verification code",500);
+        return res.status(500).json({
+            success : false,
+            message : "Error sending verification code",
+        });
+        // throw new ErrorHandler("Error sending verification code",500);
     }
 }
 
